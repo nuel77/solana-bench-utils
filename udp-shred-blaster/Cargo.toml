@@ -1,0 +1,23 @@
+[package]
+name    = "udp-shred-blaster"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "udp-shred-blaster"
+path = "src/main.rs"
+
+[dependencies]
+tokio               = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync", "net"] }
+clap                = { workspace = true }
+anyhow              = { workspace = true }
+tracing             = { workspace = true }
+tracing-subscriber  = { workspace = true }
+rand                = { workspace = true }
+bincode             = { workspace = true }
+solana-sdk          = { workspace = true }
+solana-keypair      = { workspace = true }
+solana-signer       = { workspace = true }
+solana-pubkey       = { workspace = true }
+solana-hash         = { workspace = true }
+solana-system-interface = { workspace = true }

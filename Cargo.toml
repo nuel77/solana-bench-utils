@@ -1,0 +1,51 @@
+[workspace]
+members = [
+    "quic-client",
+    "txn-blaster",
+    "nonce-bench",
+    "udp-shred-blaster",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+quic-client = { path = "quic-client" }
+
+# Solana
+solana-sdk                      = "3.0.0"
+solana-keypair                  = "3.1.0"
+solana-signer                   = "3.0.0"
+solana-pubkey                   = "3.0.0"
+solana-hash                     = "3.0.0"
+solana-rpc-client               = "3.1.10"
+solana-rpc-client-api           = "3.1.10"
+solana-tls-utils                = { version = "3.1.10", features = ["agave-unstable-api"] }
+solana-perf                     = "3.1.10"
+solana-commitment-config        = "3.0.0"
+solana-system-interface         = { version = "3.1.0", features = ["bincode"] }
+solana-compute-budget-interface = "3.0.0"
+solana-nonce                    = "3.1.0"
+agave-transaction-view          = { version = "3.1.10", features = ["agave-unstable-api"] }
+
+# Async
+tokio = "1"
+
+# QUIC
+quinn = "0.11"
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+bincode    = "1"
+wincode    = { version = "0.4.4", features = ["derive"] }
+
+# Utils
+anyhow          = "1"
+thiserror       = "2"
+tracing         = "0.1"
+tracing-subscriber = { version = "0.3" }
+clap            = { version = "4", features = ["derive"] }
+rand            = "0.8"
+dashmap         = "6"

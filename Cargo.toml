@@ -29,6 +29,9 @@ solana-system-interface         = { version = "3.1.0", features = ["bincode"] }
 solana-compute-budget-interface = "3.0.0"
 solana-nonce                    = "3.1.0"
 agave-transaction-view          = { version = "3.1.10", features = ["agave-unstable-api"] }
+solana-ledger                   = { version = "3.1", features = ["agave-unstable-api"] }
+solana-entry                    = { version = "3.1", features = ["agave-unstable-api"] }
+solana-system-transaction       = "3.0"
 
 # Async
 tokio = "1"

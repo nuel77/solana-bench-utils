@@ -17,7 +17,7 @@ use solana_hash::Hash;
 use solana_keypair::{read_keypair_file, Keypair};
 use solana_pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
-use solana_sdk::{message::Message, transaction::Transaction};
+use solana_sdk::{message::Message, signature::Signature, transaction::Transaction};
 use solana_signer::Signer;
 use solana_system_interface::instruction as system_instruction;
 
@@ -160,7 +160,7 @@ fn build_nonce_tip_tx(
     tip_lamports: u64,
     priority_fee: u64,
     nonce_hash: Hash,
-) -> Result<Vec<u8>> {
+) -> Result<(Vec<u8>, Signature)> {
     let advance_ix =
         system_instruction::advance_nonce_account(nonce_account, &nonce_authority.pubkey());
     let priority_ix = ComputeBudgetInstruction::set_compute_unit_price(priority_fee);
@@ -175,7 +175,9 @@ fn build_nonce_tip_tx(
 
     let msg = Message::new(&[advance_ix, priority_ix, tip_ix], Some(&payer.pubkey()));
     let tx = Transaction::new(&signers, msg, nonce_hash);
-    bincode::serialize(&tx).context("serialize tx")
+    let sig = tx.signatures[0];
+    let wire = bincode::serialize(&tx).context("serialize tx")?;
+    Ok((wire, sig))
 }
 
 async fn run_iteration(
@@ -191,7 +193,7 @@ async fn run_iteration(
     let mut handles = Vec::with_capacity(tip_accounts.len());
 
     for tip in tip_accounts {
-        let wire = match build_nonce_tip_tx(
+        let (wire, sig) = match build_nonce_tip_tx(
             payer,
             nonce_authority,
             nonce_account,
@@ -211,8 +213,8 @@ async fn run_iteration(
         let tip_key = *tip;
         handles.push(tokio::spawn(async move {
             match cli.send_transaction(&wire).await {
-                Ok(r) => info!(tip = %tip_key, latency_ms = r.latency_ms, "sent"),
-                Err(e) => warn!(tip = %tip_key, "send failed: {e}"),
+                Ok(r) => info!(signature = %sig, tip = %tip_key, latency_ms = r.latency_ms, "sent"),
+                Err(e) => warn!(signature = %sig, tip = %tip_key, "send failed: {e}"),
             }
         }));
     }

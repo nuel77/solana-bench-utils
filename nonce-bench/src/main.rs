@@ -17,7 +17,7 @@ use solana_hash::Hash;
 use solana_keypair::{read_keypair_file, Keypair};
 use solana_pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
-use solana_sdk::{message::Message, signature::Signature, transaction::Transaction};
+use solana_sdk::{instruction::Instruction, message::Message, signature::Signature, transaction::Transaction};
 use solana_signer::Signer;
 use solana_system_interface::instruction as system_instruction;
 
@@ -164,6 +164,12 @@ fn build_nonce_tip_tx(
     let advance_ix =
         system_instruction::advance_nonce_account(nonce_account, &nonce_authority.pubkey());
     let priority_ix = ComputeBudgetInstruction::set_compute_unit_price(priority_fee);
+    // Random memo makes every call produce a distinct transaction even with identical inputs.
+    let memo_ix = Instruction {
+        program_id: "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".parse().unwrap(),
+        accounts: vec![],
+        data: rand::random::<u64>().to_string().into_bytes(),
+    };
     let tip_ix = system_instruction::transfer(&payer.pubkey(), tip_account, tip_lamports);
 
     // The payer and nonce_authority may be the same keypair or different.
@@ -173,7 +179,10 @@ fn build_nonce_tip_tx(
         signers.push(nonce_authority);
     }
 
-    let msg = Message::new(&[advance_ix, priority_ix, tip_ix], Some(&payer.pubkey()));
+    let msg = Message::new(
+        &[advance_ix, priority_ix, memo_ix, tip_ix],
+        Some(&payer.pubkey()),
+    );
     let tx = Transaction::new(&signers, msg, nonce_hash);
     let sig = tx.signatures[0];
     let wire = bincode::serialize(&tx).context("serialize tx")?;
@@ -213,7 +222,7 @@ async fn run_iteration(
         let tip_key = *tip;
         handles.push(tokio::spawn(async move {
             match cli.send_transaction(&wire).await {
-                Ok(r) => info!(signature = %sig, tip = %tip_key, latency_ms = r.latency_ms, "sent"),
+                Ok(r) => info!(signature = %sig, tip = %tip_key, nonce = %nonce_hash, latency_ms = r.latency_ms, "sent"),
                 Err(e) => warn!(signature = %sig, tip = %tip_key, "send failed: {e}"),
             }
         }));

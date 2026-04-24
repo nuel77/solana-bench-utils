@@ -206,6 +206,7 @@ async fn run_iteration(
         let tip_key = *tip;
         handles.push(tokio::spawn(async move {
             if tip_key == pubkey!("astrazznxsGUhWShqgNtAdfrzP2G83DzcWVJDxwV9bF"){
+                println!("delayed");
                 tokio::time::sleep(Duration::from_millis(6)).await;
             }
             match cli.send_transaction(&wire).await {

@@ -207,7 +207,7 @@ async fn run_iteration(
         handles.push(tokio::spawn(async move {
             if tip_key == pubkey!("astrazznxsGUhWShqgNtAdfrzP2G83DzcWVJDxwV9bF"){
                 info!("sleeping start");
-                tokio::time::sleep(Duration::from_millis(6)).await;
+                tokio::time::sleep(Duration::from_millis(8)).await;
                 info!("sleeping done");
             }
             match cli.send_transaction(&wire).await {

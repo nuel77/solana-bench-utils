@@ -57,13 +57,13 @@ enum NonceVersions {
     Legacy(Box<NonceState>),
     Current(Box<NonceState>),
 }
+use futures_util::future::join_all;
 use std::{
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
 };
-use futures_util::future::join_all;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
@@ -92,7 +92,7 @@ struct Args {
     /// Tip accounts (space-separated pubkeys). One transaction is sent per account.
     /// Defaults to the 8 Jito mainnet tip accounts.
     #[clap(long, num_args = 1.., value_delimiter = ' ')]
-    tip_accounts: Option<Vec<String>>,
+    tip_accounts: Vec<String>,
 
     /// Lamports to transfer as tip per transaction
     #[clap(long, default_value_t = 1_000)]
@@ -118,18 +118,6 @@ struct Args {
     #[clap(long, default_value_t = 2)]
     num_endpoints: usize,
 }
-
-// Jito mainnet tip accounts (used when --tip-accounts is not specified).
-const JITO_TIP_ACCOUNTS: &[&str] = &[
-    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-    "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
-    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
-    "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1sPn9cEoRhI",
-    "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
-    "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
-    "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
-    "3AVi9Tg9Uo68tFAcEJOKYPQj4hQAUWWBYE8f6vUz5tDN",
-];
 
 /// Deserialise a nonce account and return the durable nonce hash used as
 /// `recent_blockhash` in durable-nonce transactions.
@@ -233,8 +221,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     let payer = Arc::new(
-        read_keypair_file(&args.keypair)
-            .map_err(|e| anyhow::anyhow!("read keypair {e}"))?,
+        read_keypair_file(&args.keypair).map_err(|e| anyhow::anyhow!("read keypair {e}"))?,
     );
 
     let nonce_auth_path = args
@@ -250,17 +237,11 @@ async fn main() -> Result<()> {
     let nonce_account =
         Pubkey::from_str(&args.nonce_account).context("invalid nonce account pubkey")?;
 
-    let tip_accounts: Vec<Pubkey> = match &args.tip_accounts {
-        Some(list) => list
-            .iter()
-            .map(|s| Pubkey::from_str(s).context("invalid tip account pubkey"))
-            .collect::<Result<_>>()?,
-        None => JITO_TIP_ACCOUNTS
-            .iter()
-            .map(|s| Pubkey::from_str(s).unwrap())
-            .collect(),
-    };
-
+    let tip_accounts: Vec<Pubkey> = args
+        .tip_accounts
+        .iter()
+        .map(|s| Pubkey::from_str(s).context("invalid tip account pubkey"))
+        .collect::<Result<_>>()?;
     let mut settings = QuicSettings::default();
     settings.set_num_endpoint(args.num_endpoints);
     settings.max_send_attempts = 1;

@@ -15,7 +15,7 @@ use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_hash::Hash;
 use solana_keypair::{Keypair, read_keypair_file};
-use solana_pubkey::Pubkey;
+use solana_pubkey::{pubkey, Pubkey};
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_sdk::{
     instruction::Instruction, message::Message, signature::Signature, transaction::Transaction,
@@ -205,6 +205,9 @@ async fn run_iteration(
         let cli = client.clone();
         let tip_key = *tip;
         handles.push(tokio::spawn(async move {
+            if tip_key == pubkey!("astrazznxsGUhWShqgNtAdfrzP2G83DzcWVJDxwV9bF"){
+                tokio::time::sleep(Duration::from_millis(6)).await;
+            }
             match cli.send_transaction(&wire).await {
                 Ok(r) => info!(signature = %sig, tip = %tip_key, nonce = %nonce_hash, latency_ms = r.latency_ms, "sent"),
                 Err(e) => warn!(signature = %sig, tip = %tip_key, "send failed: {e}"),

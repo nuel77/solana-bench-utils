@@ -14,10 +14,12 @@ use quic_client::{config::QuicSettings, quic_client::QuicClient};
 use solana_commitment_config::CommitmentConfig;
 use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_hash::Hash;
-use solana_keypair::{read_keypair_file, Keypair};
+use solana_keypair::{Keypair, read_keypair_file};
 use solana_pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, message::Message, signature::Signature, transaction::Transaction};
+use solana_sdk::{
+    instruction::Instruction, message::Message, signature::Signature, transaction::Transaction,
+};
 use solana_signer::Signer;
 use solana_system_interface::instruction as system_instruction;
 
@@ -61,6 +63,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use futures_util::future::join_all;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
@@ -128,15 +131,6 @@ const JITO_TIP_ACCOUNTS: &[&str] = &[
     "3AVi9Tg9Uo68tFAcEJOKYPQj4hQAUWWBYE8f6vUz5tDN",
 ];
 
-fn expand_tilde(path: &str) -> String {
-    if let Some(rest) = path.strip_prefix("~/") {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "/root".into());
-        format!("{}/{}", home, rest)
-    } else {
-        path.to_string()
-    }
-}
-
 /// Deserialise a nonce account and return the durable nonce hash used as
 /// `recent_blockhash` in durable-nonce transactions.
 fn nonce_blockhash(account_data: &[u8]) -> Result<Hash> {
@@ -166,7 +160,9 @@ fn build_nonce_tip_tx(
     let priority_ix = ComputeBudgetInstruction::set_compute_unit_price(priority_fee);
     // Random memo makes every call produce a distinct transaction even with identical inputs.
     let memo_ix = Instruction {
-        program_id: "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr".parse().unwrap(),
+        program_id: "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+            .parse()
+            .unwrap(),
         accounts: vec![],
         data: rand::random::<u64>().to_string().into_bytes(),
     };
@@ -228,9 +224,7 @@ async fn run_iteration(
         }));
     }
 
-    for h in handles {
-        let _ = h.await;
-    }
+    join_all(handles).await;
 }
 
 #[tokio::main]
@@ -238,10 +232,9 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Args::parse();
 
-    let keypair_path = expand_tilde(&args.keypair);
     let payer = Arc::new(
-        read_keypair_file(&keypair_path)
-            .map_err(|e| anyhow::anyhow!("read keypair {keypair_path}: {e}"))?,
+        read_keypair_file(&args.keypair)
+            .map_err(|e| anyhow::anyhow!("read keypair {e}"))?,
     );
 
     let nonce_auth_path = args
@@ -249,14 +242,13 @@ async fn main() -> Result<()> {
         .as_deref()
         .unwrap_or(&args.keypair)
         .to_string();
-    let nonce_auth_path = expand_tilde(&nonce_auth_path);
     let nonce_authority = Arc::new(
         read_keypair_file(&nonce_auth_path)
             .map_err(|e| anyhow::anyhow!("read nonce authority {nonce_auth_path}: {e}"))?,
     );
 
-    let nonce_account = Pubkey::from_str(&args.nonce_account)
-        .context("invalid nonce account pubkey")?;
+    let nonce_account =
+        Pubkey::from_str(&args.nonce_account).context("invalid nonce account pubkey")?;
 
     let tip_accounts: Vec<Pubkey> = match &args.tip_accounts {
         Some(list) => list

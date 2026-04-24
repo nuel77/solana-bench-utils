@@ -59,10 +59,7 @@ pub struct QuicClient {
 }
 
 impl QuicClient {
-    pub fn new(
-        peer_addr: Arc<RwLock<SocketAddr>>,
-        quic_settings: QuicSettings,
-    ) -> Result<Self> {
+    pub fn new(peer_addr: Arc<RwLock<SocketAddr>>, quic_settings: QuicSettings) -> Result<Self> {
         let client_certificate =
             solana_tls_utils::QuicClientCertificate::new(Some(&Keypair::new()));
 

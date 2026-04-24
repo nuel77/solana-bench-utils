@@ -115,8 +115,13 @@ fn generate_slot_shreds(
     let mut rng = rand::thread_rng();
     let entries = make_entries(&mut rng, entries_per_slot, txns_per_entry);
 
-    let shredder = Shredder::new(slot, parent_slot, 0 /* reference_tick */, shred_version)
-        .map_err(|e| anyhow::anyhow!("create Shredder: {e:?}"))?;
+    let shredder = Shredder::new(
+        slot,
+        parent_slot,
+        0, /* reference_tick */
+        shred_version,
+    )
+    .map_err(|e| anyhow::anyhow!("create Shredder: {e:?}"))?;
 
     let (data, coding) = shredder.entries_to_merkle_shreds_for_tests(
         keypair,
@@ -198,11 +203,7 @@ async fn recv_task(
     }
 
     if echoes > 0 {
-        info!(
-            echoes,
-            avg_rtt_us = total_rtt_us / echoes,
-            "RTT summary"
-        );
+        info!(echoes, avg_rtt_us = total_rtt_us / echoes, "RTT summary");
     }
 }
 
@@ -254,7 +255,11 @@ async fn main() -> Result<()> {
     }
 
     // ── Rate-limited blast loop ──────────────────────────────────────────────
-    let interval_us = if args.pps > 0 { 1_000_000 / args.pps } else { 0 };
+    let interval_us = if args.pps > 0 {
+        1_000_000 / args.pps
+    } else {
+        0
+    };
     let mut ticker = if interval_us > 0 {
         Some(tokio::time::interval(Duration::from_micros(interval_us)))
     } else {

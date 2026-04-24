@@ -20,7 +20,10 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
-#[clap(name = "txn-blaster", about = "Blast transactions to a Solana TPU QUIC endpoint")]
+#[clap(
+    name = "txn-blaster",
+    about = "Blast transactions to a Solana TPU QUIC endpoint"
+)]
 struct Args {
     /// Target QUIC endpoint (IP:PORT)
     #[clap(long)]
